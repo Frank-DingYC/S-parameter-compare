@@ -49,12 +49,6 @@ class compare:
             print(f"{self.comparison.software} is not exist: {key}")
     
     def snp_s2p(self, key:str, result_path:Path, cmp_type:str):
-        if not result_path.exists():
-            os.makedirs(result_path)
-            print(f"Directory '{result_path}' created.")
-        else:
-            shutil.rmtree(result_path)
-        
         combos = list(combinations(range(self.compare_list[key][2]), 2))
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(len(combos), 4, figsize=(5*4, 3*len(combos)))
@@ -68,10 +62,13 @@ class compare:
                 self.plot_s_parameters(key, ax, i, j, standard_s2p, comparison_s2p, combo, permutation)
                 self.compare_s2p(ax1, i, j, standard_s2p, comparison_s2p, combo, permutation, cmp_type)
         (result_path /"Figures").mkdir(parents=True, exist_ok=True)
-        plt.tight_layout()
+        fig.tight_layout()
+        fig1.tight_layout()
         fig.savefig(result_path /"Figures"/f"{key}_S-parameters.png")
         fig1.savefig(result_path /"Figures"/f"{key}_{cmp_type}_diff.png")
         plt.close(fig)
+        plt.close(fig1)
+
     
     def compare_s2p(self, ax, i, j, standard_s2p, comparison_s2p, combo, permutation, cmp_type):
         frequency = standard_s2p.frequency.f
@@ -81,8 +78,12 @@ class compare:
             # calculate the relative difference
             relative_difference  = abs(standard - comparison) / standard * 100
             # plot the difference
-            ax[j][i].plot(frequency, relative_difference, label='Difference')
-            ax[j][i].set_title(f"Abs Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
+            try:
+                ax[j][i].plot(frequency, relative_difference, label='Difference')
+                ax[j][i].set_title(f"Abs Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
+            except TypeError:
+                ax[i].plot(frequency, relative_difference, label='Difference')
+                ax[i].set_title(f"Abs Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
 
         elif cmp_type == 'db':
             standard = 20*np.log10(np.abs(standard_s2p.s[:, permutation[0], permutation[1]]))
@@ -90,33 +91,64 @@ class compare:
             # calculate the relative difference
             relative_difference  = abs(standard - comparison) / abs(standard) * 100
             # plot the difference
-            ax[j][i].plot(frequency, relative_difference, label='Difference')
-            ax[j][i].set_title(f"dB Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
+            try:
+                ax[j][i].plot(frequency, relative_difference, label='Difference')
+                ax[j][i].set_title(f"dB Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
+            except TypeError:
+                ax[i].plot(frequency, relative_difference, label='Difference')
+                ax[i].set_title(f"dB Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
         elif cmp_type == 'complex':
             standard = standard_s2p.s[:, permutation[0], permutation[1]]
             comparison = comparison_s2p.s[:, permutation[0], permutation[1]]
             # calculate the relative difference
             relative_difference  = ((standard.real-comparison.real)**2 + (standard.imag-comparison.imag)**2)**0.5 / abs(standard) * 100
             # plot the difference
-            ax[j][i].plot(frequency, relative_difference, label='Difference')
-            ax[j][i].set_title(f"Complex Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
+            try:
+                ax[j][i].plot(frequency, relative_difference, label='Difference')
+                ax[j][i].set_title(f"Complex Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
+            except TypeError:
+                ax[i].plot(frequency, relative_difference, label='Difference')
+                ax[i].set_title(f"Complex Relative Difference S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
         else:
             raise ValueError('cmp_type must be abs, db or complex')
-        ax[j][i].plot(frequency, 5*np.ones_like(frequency), 'r--', label='5% Difference') 
-        ax[j][i].set_xlabel("Frequency (GHz)")
-        ax[j][i].set_ylabel("Difference (%)")
-        ax[j][i].legend()
+        try:
+            ax[j][i].plot(frequency, 5*np.ones_like(frequency), 'r--', label='5% Difference') 
+            ax[j][i].set_xlabel("Frequency (GHz)")
+            ax[j][i].set_ylabel("Difference (%)")
+            ax[j][i].legend()
+        except TypeError:
+            ax[i].plot(frequency, 5*np.ones_like(frequency), 'r--', label='5% Difference')
+            ax[i].set_xlabel("Frequency (GHz)")
+            ax[i].set_ylabel("Difference (%)")
+            ax[i].legend()
 
     def plot_s_parameters(self, key, ax, i, j, standard_s2p, comparison_s2p, combo, permutation):
-        ax[j][i].set_title(f"S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
-        ax[j][i].set_xlabel("Frequency (GHz)")
-        ax[j][i].set_ylabel("S-parameter")
-        ax[j][i].grid(True)
-        standard_s2p.plot_s_db(m=permutation[0], n=permutation[1], ax=ax[j][i], label=f"{key}{self.standard.software}")
-        comparison_s2p.plot_s_db(m=permutation[0], n=permutation[1], ax=ax[j][i], label=f"{key}{self.comparison.software}")
-        ax[j][i].legend()
+        try:
+            ax[j][i].set_title(f"S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
+            ax[j][i].set_xlabel("Frequency (GHz)")
+            ax[j][i].set_ylabel("S-parameter")
+            ax[j][i].grid(True)
+            standard_s2p.plot_s_db(m=permutation[0], n=permutation[1], ax=ax[j][i], label=f"{key}{self.standard.software}")
+            comparison_s2p.plot_s_db(m=permutation[0], n=permutation[1], ax=ax[j][i], label=f"{key}{self.comparison.software}")
+            ax[j][i].legend()
+        except TypeError:
+            ax[i].set_title(f"S{combo[permutation[0]]+1}{combo[permutation[1]]+1}")
+            ax[i].set_xlabel("Frequency (GHz)")
+            ax[i].set_ylabel("S-parameter")
+            ax[i].grid(True)
+            standard_s2p.plot_s_db(m=permutation[0], n=permutation[1], ax=ax[i], label=f"{key}{self.standard.software}")
+            comparison_s2p.plot_s_db(m=permutation[0], n=permutation[1], ax=ax[i], label=f"{key}{self.comparison.software}")
+            ax[i].legend()
 
     def compare_all(self, result_path = Path("./Results"), cmp_type = 'db'):
+        if not result_path.exists():
+            os.makedirs(result_path)
+            print(f"Directory '{result_path}' created.")
+        else:
+            shutil.rmtree(result_path)
+            print(f"Directory '{result_path}' already exists. Deleting and recreating.")
+            os.makedirs(result_path)
+            print(f"Directory '{result_path}' recreated.")
         for key in self.compare_list:
             self.read(key)
             self.snp_s2p(key, result_path, cmp_type)
